@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32G431xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;            ../Drivers/STM32G4xx_HAL_Driver/Inc;            ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy;            ../Drivers/CMSIS/Device/ST/STM32G4xx/Include;            ../Drivers/CMSIS/Include;            .\user_lib</IncludePath>
+              <IncludePath>../Core/Inc;             ../Drivers/STM32G4xx_HAL_Driver/Inc;             ../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy;             ../Drivers/CMSIS/Device/ST/STM32G4xx/Include;             ../Drivers/CMSIS/Include;             .\user_lib</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -423,6 +423,16 @@
               <FileName>stm32g4xx_hal_msp.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/stm32g4xx_hal_msp.c</FilePath>
+            </File>
+            <File>
+              <FileName>DRV8311P.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user_lib\DRV8311P.c</FilePath>
+            </File>
+            <File>
+              <FileName>DRV8311P.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user_lib\DRV8311P.h</FilePath>
             </File>
           </Files>
         </Group>

@@ -42,4 +42,4 @@ gimbal/stm32g4xx_it.o: ..\Core\Src\stm32g4xx_it.c ..\Core\Inc\main.h \
   E:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h \
   E:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h user_lib\math_ops.h \
   E:\Keil_v5\ARM\ARMCLANG\Bin\..\include\math.h user_lib\OwOc.h \
-  user_lib\monitor.h ..\Core\Inc\stm32g4xx_it.h
+  user_lib\monitor.h user_lib\DRV8311P.h ..\Core\Inc\stm32g4xx_it.h

@@ -1,4 +1,4 @@
-gimbal/main.o: ..\Core\Src\main.c ..\Core\Inc\main.h \
+gimbal/drv8311p.o: user_lib\DRV8311P.c user_lib\DRV8311P.h \
   ..\Drivers\STM32G4xx_HAL_Driver\Inc\stm32g4xx_hal.h \
   ..\Core\Inc\stm32g4xx_hal_conf.h \
   ..\Drivers\STM32G4xx_HAL_Driver\Inc\stm32g4xx_hal_rcc.h \
@@ -37,9 +37,4 @@ gimbal/main.o: ..\Core\Src\main.c ..\Core\Inc\main.h \
   ..\Drivers\STM32G4xx_HAL_Driver\Inc\stm32g4xx_hal_tim.h \
   ..\Drivers\STM32G4xx_HAL_Driver\Inc\stm32g4xx_hal_tim_ex.h \
   ..\Drivers\STM32G4xx_HAL_Driver\Inc\stm32g4xx_hal_uart.h \
-  ..\Drivers\STM32G4xx_HAL_Driver\Inc\stm32g4xx_hal_uart_ex.h \
-  user_lib\MT6701_SSI.h E:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
-  E:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdlib.h \
-  E:\Keil_v5\ARM\ARMCLANG\Bin\..\include\string.h user_lib\math_ops.h \
-  E:\Keil_v5\ARM\ARMCLANG\Bin\..\include\math.h user_lib\OwOc.h \
-  user_lib\monitor.h user_lib\DRV8311P.h
+  ..\Drivers\STM32G4xx_HAL_Driver\Inc\stm32g4xx_hal_uart_ex.h

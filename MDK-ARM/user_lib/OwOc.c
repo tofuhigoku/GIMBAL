@@ -111,10 +111,7 @@ void setPhaseVoltage(float _Uq, float _Ud, float angle_el,	Motor_struct* MOTOR )
 		MOTOR->dtc_v = Ub;
 		MOTOR->dtc_w = Uc;
 
-//		Ua = Ua/voltage_limit;
-//		Ub = Ub/voltage_limit;
-//		Uc = Uc/voltage_limit;
-		set_dtc(MOTOR);
+//		set_dtc(MOTOR);
 }
 
 uint8_t phase_order(Motor_struct *MOTOR, MT6701_sensor * encoder, float calib_voltage)
@@ -373,9 +370,6 @@ void get_current(Motor_struct* MOTOR, float dt)
 //	MOTOR->adc_b_raw = ADC_BUFFER[1]*(1-LPF_) + MOTOR->adc_b_raw*LPF_;
 //	MOTOR->adc_c_raw = ADC_BUFFER[2]*(1-LPF_) + MOTOR->adc_c_raw*LPF_;
 	
-//	MOTOR->i_a = ( 3.3*0.5f - MOTOR->adc_a_raw*3.3/4096)*MOTOR->current_gain;
-//	MOTOR->i_b = ( 3.3*0.5f - MOTOR->adc_b_raw*3.3/4096)*MOTOR->current_gain;
-//	MOTOR->i_c = ( 3.3*0.5f - MOTOR->adc_c_raw*3.3/4096)*MOTOR->current_gain;
 	
 	MOTOR->i_a = ( (MOTOR->adc_a_raw - MOTOR->adc_a_offset))*MOTOR->current_gain;
 	MOTOR->i_b = ( (MOTOR->adc_b_raw - MOTOR->adc_b_offset))*MOTOR->current_gain;
@@ -389,11 +383,7 @@ void get_current_offset(Motor_struct* MOTOR, uint16_t* ADC_offset_BUFFER)
 	MOTOR->adc_b_offset = ADC_offset_BUFFER[1];
 	MOTOR->adc_c_offset = ADC_offset_BUFFER[2];
 
-	
-//	
-//	MOTOR->adc_a_offset = ( 3.3*0.5f - MOTOR->adc_a_raw*3.3/4096)*MOTOR->current_gain;
-//	MOTOR->adc_b_offset = ( 3.3*0.5f - MOTOR->adc_b_raw*3.3/4096)*MOTOR->current_gain;
-//	MOTOR->adc_c_offset = ( 3.3*0.5f - MOTOR->adc_c_raw*3.3/4096)*MOTOR->current_gain;
+
 }
 
 void get_DQ_current(Motor_struct* MOTOR, float electric_angle)

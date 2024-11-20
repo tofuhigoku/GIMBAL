@@ -90,157 +90,8 @@ uint8_t               TxData[20] = {0XF0, 0xF1, 0XF2, 0XF3, 0XF4, 0XF5, 0XF6, 0X
 uint8_t               RxData[20];
 
 st_drv8311p_t drv8311p_reg_data = {};
-st_drv8311p_t drv8311p_address = {
-		DEV_STS1_offset,
-		OT_STS_offset,				
-		SUP_STS_offset,			
-		DRV_STS_offset,		
-		SYS_STS_offset,		
-
-		PWM_SYNC_PRD_offset,	
-		FLT_MODE_offset,
-		SYSF_CTRL_offset,		
-		DRVF_CTRL_offset,	
-		FLT_TCTRL_offset,	
-		FLT_CLR_offset,	
-		PWMG_PERIOD_offset,	
-		PWMG_A_DUTY_offset,
-		PWMG_B_DUTY_offset,
-		PWMG_C_DUTY_offset,
-		PWM_STATE_offset,
-		PWMG_CTRL_offset,	
-		PWM_CTRL1_offset,	
-		DRV_CTRL_offset,	
-		CSA_CTRL_offset,		
-		SYS_CTRL_offset,		
-};
-	
-
-void DRV8311P_read_addr(uint8_t addr, uint16_t *p_Data)
-{
-	cmd = 0x8000;
-	cmd = cmd | ( addr << 3 );
-	uint8_t write_buffer[4] = {cmd >> 8, cmd & 0x00ff, 0, 0};
-	uint8_t read_buffer[4] = {0};
-	
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0); 
-	HAL_SPI_TransmitReceive(&hspi2, (uint8_t*) &write_buffer, (uint8_t*) &read_buffer, 4 , HAL_MAX_DELAY);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1); 
-	*p_Data = (read_buffer[2] << 8 )| read_buffer[3];
-}
-uint8_t read_buffer[50] = {0};
-void DRV8311P_read_multiple_addr(uint8_t base_addr, uint16_t *p_Data, size_t num_of_reg)
-{
-	cmd = 0x8000;
-	cmd = cmd | ( base_addr << 3 );
-	uint8_t write_buffer[50] = {cmd >> 8, cmd & 0x00ff, 0, 0};
 
 	
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0); 
-	HAL_SPI_TransmitReceive(&hspi2, (uint8_t*) &write_buffer, (uint8_t*) &read_buffer, num_of_reg*sizeof(uint16_t) , HAL_MAX_DELAY);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1); 
-	
-	for(size_t i = 0; i < num_of_reg; i++)
-	{
-		*(p_Data + i) = (read_buffer[2 + 2*i] << 8) | read_buffer[2 + 2*i + 1];
-		
-	}
-//	memcpy(p_Data, &read_buffer[2], num_of_reg*sizeof(uint16_t));
-//	for(size_t i = 0; i < num_of_reg; i++)
-//	{
-//		*(p_Data+i) = DRV8311P_read_addr(
-//		
-//	}
-}
-void DRV8311P_read_All_reg(st_drv8311p_t* p_drv8311p_address, st_drv8311p_t* p_drv8311p_reg_data)
-{
-	uint16_t* p_base_addr = (uint16_t*)&p_drv8311p_address->DEV_STS1;
-	uint16_t* p_data = (uint16_t*) p_drv8311p_reg_data;
-	for(size_t i = 0; i < sizeof(st_drv8311p_t)/sizeof(uint16_t); i++)
-	{
-		DRV8311P_read_addr(*(uint8_t*)(p_base_addr + i), (uint16_t*)(p_data + i));
-		
-	}
-}
-
-
-void DRV8311P_write_addr(uint8_t addr, uint16_t *p_Data)
-{
-	cmd = 0x0000;
-	cmd = cmd | ( addr << 3 );
-	uint8_t write_buffer[4] = {cmd >> 8, cmd & 0x00ff, *p_Data>>8, (*p_Data)&0xff};
-	uint8_t read_buffer[4] = {0};
-	
-
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0); 
-	HAL_SPI_TransmitReceive(&hspi2, (uint8_t*) &write_buffer, (uint8_t*) &read_buffer, 4 , HAL_MAX_DELAY);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1); 
-//	*p_Data = (read_buffer[2] << 8 )| read_buffer[3];
-}
-
-void DRV8311P_Init(st_drv8311p_t* p_drv8311p_address, st_drv8311p_t* p_drv8311p_reg_data)
-{
-	uint16_t writedata = 0x31;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->DRVF_CTRL, &writedata);	// set OCP current level is 5A
-	
-	writedata = 0x03;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->FLT_TCTRL, &writedata);	// set SLOW_RETRY = 0.5s, FAST_RETRY = 5ms
-	
-	writedata = 1000;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_PERIOD, &writedata);	// set PWMG_PERIOD = 1000
-	
-	writedata = 500;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_A_DUTY, &writedata);	// set PWMG_A_DUTY = 500
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_B_DUTY, &writedata);	// set PWMG_B_DUTY = 500
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_C_DUTY, &writedata);	// set PWMG_C_DUTY = 500
-	
-	writedata = 0x05D;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_CTRL, &writedata);	// 
-	
-	writedata = 0x007;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWM_CTRL1, &writedata);	// 
-	
-	writedata = 0x11;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->DRV_CTRL, &writedata);	// set TDEAD_CTRL = 200ns, SLEW_RATE = 75 V/µs
-	
-	writedata = 0x08;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->CSA_CTRL, &writedata);	// set CSA_EN = 1,  CSA_GAIN = 0.25V/A
-
-}
-void DRV8311P_PWM_GEN(st_drv8311p_t* p_drv8311p_address, uint8_t ON_OFF)
-{
-	ON_OFF = (ON_OFF>0)?1:0;
-	uint16_t buffer = 0x0;
-	DRV8311P_read_addr((uint8_t) p_drv8311p_address->PWMG_CTRL, &buffer);
-	buffer = (ON_OFF>0)?(buffer|(1 << 10)):(buffer & (~(1 << 10)));
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_CTRL, &buffer);
-}
-
-void DRV8311P_update_PWM(st_drv8311p_t* p_drv8311p_address, uint16_t Period_12bit, uint16_t dtcA, uint16_t dtcB, uint16_t dtcC)
-{
-	Period_12bit = Period_12bit>0xFFF?0xFFF:Period_12bit;
-	uint16_t writedata = Period_12bit;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_PERIOD, &writedata);	// set PWMG_PERIOD = 1000
-	
-	writedata = dtcA>Period_12bit?Period_12bit:dtcA;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_A_DUTY, &writedata);	// set PWMG_A_DUTY = 500
-	
-	writedata = dtcB>Period_12bit?Period_12bit:dtcB;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_B_DUTY, &writedata);	// set PWMG_B_DUTY = 500
-	
-	writedata = dtcC>Period_12bit?Period_12bit:dtcC;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_C_DUTY, &writedata);	// set PWMG_C_DUTY = 500
-}
-	
-
-
-
-
-
-
-
 
 
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
@@ -303,6 +154,14 @@ int main(void)
   MX_TIM1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+	
+	cmd = 0x0;
+	addr = 0x0;
+	w_data = 0x0;
+	r_data = 0x0;
+	flag = 0;
+	
+	
 	TxHeader.Identifier = 0x3;
   TxHeader.IdType = FDCAN_STANDARD_ID;
   TxHeader.TxFrameType = FDCAN_DATA_FRAME;
@@ -322,24 +181,35 @@ int main(void)
     Error_Handler();
   }
 	
+	BLDC_param_init(&BLDC, 5, 5, 0.25, 1, 1,1, 280, 1);
+	
+	DRV8311P_Init(&drv8311p_address, &drv8311p_reg_data);
+	
 	HAL_ADC_Start(&hadc2);
 	HAL_ADC_Start(&hadc1);
 	
 	HAL_Delay(400);
-	int n_of_sample = 100;
-	for(int i =0; i<n_of_sample; i++)
 	{
-	
-		HAL_ADC_Start(&hadc1);
-		HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-		HAL_Delay(10);
-		ADC1_offset_buffer[0] += HAL_ADC_GetValue(&hadc2);
-		ADC1_offset_buffer[1] += HAL_ADC_GetValue(&hadc1);
-		HAL_Delay(10);	
-		
+			int n_of_sample = 100;
+			for(int i =0; i<n_of_sample; i++)
+			{
+			
+				HAL_ADC_Start(&hadc1);
+				HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+				HAL_Delay(10);
+				ADC1_offset_buffer[1] += HAL_ADC_GetValue(&hadc2);
+				ADC1_offset_buffer[2] += HAL_ADC_GetValue(&hadc1);
+				HAL_Delay(10);	
+				
+			}
+			ADC1_offset_buffer[1] = ADC1_offset_buffer[1]/n_of_sample;
+			ADC1_offset_buffer[2] = ADC1_offset_buffer[2]/n_of_sample;
 	}
-	ADC1_offset_buffer[0] = ADC1_offset_buffer[0]/n_of_sample;
-	ADC1_offset_buffer[1] = ADC1_offset_buffer[1]/n_of_sample;
+	HAL_Delay(100);
+	
+	position_sensor_warmup(&MT6701, 20);
+	
+	MT6701.zero_electric_angle = 0.0f;
 	
 	__HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
 	
@@ -347,17 +217,18 @@ int main(void)
 //	HAL_TIM_Base_Start(&htim3);
 	
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+	HAL_Delay(200);
 //	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
-	position_sensor_warmup(&MT6701, 20);
 	
-	MT6701.zero_electric_angle = 0.0f;
+	DRV8311P_read_All_reg(&drv8311p_address, &drv8311p_reg_data);
 	
-	cmd = 0x0;
-	addr = 0x0;
-	w_data = 0x0;
-	r_data = 0x0;
-	flag = 0;
-	tmp = sizeof(uint16_t);
+	setPhaseVoltage(0, 0, 0, &BLDC);
+	
+	DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, BLDC.phase_order);
+	DRV8311P_PWM_GEN(&drv8311p_address , 1);
+	DRV8311P_read_All_reg(&drv8311p_address, &drv8311p_reg_data);
+
+
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 0);
 //	DRV8311P_write_n_read();
   /* USER CODE END 2 */
@@ -687,7 +558,7 @@ static void MX_TIM1_Init(void)
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 9999;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.RepetitionCounter = 1;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
   {

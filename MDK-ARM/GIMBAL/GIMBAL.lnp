@@ -6,6 +6,7 @@
 "gimbal\main.o"
 "gimbal\stm32g4xx_it.o"
 "gimbal\stm32g4xx_hal_msp.o"
+"gimbal\drv8311p.o"
 "gimbal\stm32g4xx_hal_adc.o"
 "gimbal\stm32g4xx_hal_adc_ex.o"
 "gimbal\stm32g4xx_ll_adc.o"
