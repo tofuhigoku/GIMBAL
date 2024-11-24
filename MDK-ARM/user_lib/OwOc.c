@@ -71,17 +71,20 @@ void set_dtc(Motor_struct* MOTOR){
 		float dtc_w = 1.0f - MOTOR->dtc_w;
 
 	/* Handle phase order swapping so that voltage/current/torque match encoder direction */
-	if(!MOTOR->phase_order){ 
-		
 		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, ((htim1.Instance->ARR))*dtc_u);
 		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, ((htim1.Instance->ARR))*dtc_v);
 		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, ((htim1.Instance->ARR))*dtc_w);
-	}
-	else{					// dao thu tu pha
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, ((htim1.Instance->ARR))*dtc_u);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, ((htim1.Instance->ARR))*dtc_v);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, ((htim1.Instance->ARR))*dtc_w);
-	}
+//	if(!MOTOR->phase_order){ 
+//		
+//		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, ((htim1.Instance->ARR))*dtc_u);
+//		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, ((htim1.Instance->ARR))*dtc_v);
+//		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, ((htim1.Instance->ARR))*dtc_w);
+//	}
+//	else{					// dao thu tu pha
+//		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, ((htim1.Instance->ARR))*dtc_u);
+//		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, ((htim1.Instance->ARR))*dtc_v);
+//		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, ((htim1.Instance->ARR))*dtc_w);
+//	}
 }
 
 void setPhaseVoltage(float _Uq, float _Ud, float angle_el,	Motor_struct* MOTOR ) {
@@ -107,10 +110,33 @@ void setPhaseVoltage(float _Uq, float _Ud, float angle_el,	Motor_struct* MOTOR )
 		Ub = fminf(fmaxf(Ub, 0), 1);
 		Uc = fminf(fmaxf(Uc, 0), 1);
 		
-		MOTOR->dtc_u = Ua;
-		MOTOR->dtc_v = Ub;
-		MOTOR->dtc_w = Uc;
-
+		if(MOTOR->phase_order)								// have to swap phase order
+		{
+				if(MOTOR->adc_a_raw == 0)					// swap B and C
+				{
+						MOTOR->dtc_u = Ua;
+						MOTOR->dtc_v = Uc;
+						MOTOR->dtc_w = Ub;
+				}
+				else if (MOTOR->adc_b_raw == 0)		// swap A and C
+				{
+						MOTOR->dtc_u = Uc;
+						MOTOR->dtc_v = Ub;
+						MOTOR->dtc_w = Ua;
+				}
+				else	// MOTOR->adc_c_raw == 0		// swap A and B
+				{
+						MOTOR->dtc_u = Ub;
+						MOTOR->dtc_v = Ua;
+						MOTOR->dtc_w = Uc;
+				}
+		}
+		else																	// keep default phase order
+		{
+				MOTOR->dtc_u = Ua;
+				MOTOR->dtc_v = Ub;
+				MOTOR->dtc_w = Uc;
+		}
 //		set_dtc(MOTOR);
 }
 
@@ -122,29 +148,23 @@ uint8_t phase_order(Motor_struct *MOTOR, MT6701_sensor * encoder, float calib_vo
     for (int i = 0; i <=500; i++ ) {
       float angle = 0 + _2PI * i / 500.0f;
       setPhaseVoltage(0, calib_voltage,  angle, MOTOR);
-//		set_dtc();
 			MT6701_read_data(encoder);
-//        _wrapped.update();
       HAL_Delay(2);
     }
     // take and angle in the middle
-//    _wrapped.update();
 		MT6701_read_data(encoder);
     float mid_angle = encoder->raw_angle;
     // move one electrical revolution backwards
     for (int i = 500; i >=0; i-- ) {
       float angle = 0 + _2PI * i / 500.0f ;
       setPhaseVoltage(0, calib_voltage,  angle, MOTOR);
-//		set_dtc();			
 			MT6701_read_data(encoder);
-//        _wrapped.update();
       HAL_Delay(2);
     }
 //    _wrapped.update();
 		MT6701_read_data(encoder);
     float end_angle = encoder->raw_angle;
     setPhaseVoltage(0, 0,  0, MOTOR);
-//		set_dtc();
     HAL_Delay(200);
     // determine the direction the sensor moved
     int directionSensor;
@@ -160,8 +180,8 @@ uint8_t phase_order(Motor_struct *MOTOR, MT6701_sensor * encoder, float calib_vo
 //      motor.sensor_direction = Direction::CCW;
 
     }
-//		encoder->directionSensor = directionSensor;
 		swap_phase_order = directionSensor>0?0:1;
+		MOTOR->phase_order = swap_phase_order;
 	return swap_phase_order;
 }
 
@@ -349,41 +369,95 @@ uint8_t phase_order(Motor_struct *MOTOR, MT6701_sensor * encoder, float calib_vo
 									//}
 
 ////////////////////////
-void get_current(Motor_struct* MOTOR, float dt)
+void get_current(Motor_struct* MOTOR, uint16_t ADC_iA, uint16_t ADC_iB, uint16_t ADC_iC)
 {
-//	float LPF_ = 0.92f;
-	if(!MOTOR->phase_order)
+	if(ADC_iA == 0)				// sampling only phase B and C
 	{
-		MOTOR->adc_b_raw = HAL_ADC_GetValue(&hadc1);
-		MOTOR->adc_a_raw = HAL_ADC_GetValue(&hadc2);
+				if(!MOTOR->phase_order)				// not have to swap phase order
+				{
+					MOTOR->adc_b_raw = ADC_iB;
+					MOTOR->adc_c_raw = ADC_iC;
+				}
+				else													// have to swap phase order
+				{
+					MOTOR->adc_b_raw = ADC_iC;
+					MOTOR->adc_c_raw = ADC_iB;
+
+				}
+				
+				MOTOR->i_b = ( (MOTOR->adc_b_raw - MOTOR->adc_b_offset))*MOTOR->current_gain;
+				MOTOR->i_c = ( (MOTOR->adc_c_raw - MOTOR->adc_c_offset))*MOTOR->current_gain;
+				MOTOR->i_a = - MOTOR->i_b - MOTOR->i_c;
 	}
-	else
+	else if (ADC_iB == 0)		// sampling only phase A and C
 	{
-		MOTOR->adc_b_raw = HAL_ADC_GetValue(&hadc2);
-		MOTOR->adc_a_raw = HAL_ADC_GetValue(&hadc1);
-		
+				if(!MOTOR->phase_order)					// not have to swap phase order
+				{
+					MOTOR->adc_a_raw = ADC_iA;
+					MOTOR->adc_c_raw = ADC_iC;
+				}
+				else														// have to swap phase order
+				{
+					MOTOR->adc_a_raw = ADC_iC;
+					MOTOR->adc_c_raw = ADC_iA;
+				}
+				
+				MOTOR->i_a = ( (MOTOR->adc_a_raw - MOTOR->adc_a_offset))*MOTOR->current_gain;
+				MOTOR->i_c = ( (MOTOR->adc_c_raw - MOTOR->adc_c_offset))*MOTOR->current_gain;
+				MOTOR->i_b = - MOTOR->i_a - MOTOR->i_c;
 	}
-	HAL_ADC_Start(&hadc1);
-//	HAL_ADC_Start(&hadc2);
-	HAL_ADC_PollForConversion(&hadc1, 100);
-//	MOTOR->adc_a_raw = ADC_BUFFER[0]*(1-LPF_) + MOTOR->adc_a_raw*LPF_;
-//	MOTOR->adc_b_raw = ADC_BUFFER[1]*(1-LPF_) + MOTOR->adc_b_raw*LPF_;
-//	MOTOR->adc_c_raw = ADC_BUFFER[2]*(1-LPF_) + MOTOR->adc_c_raw*LPF_;
-	
-	
-	MOTOR->i_a = ( (MOTOR->adc_a_raw - MOTOR->adc_a_offset))*MOTOR->current_gain;
-	MOTOR->i_b = ( (MOTOR->adc_b_raw - MOTOR->adc_b_offset))*MOTOR->current_gain;
-//	MOTOR->i_c = ( (MOTOR->adc_a_offset - MOTOR->adc_c_raw))*MOTOR->current_gain;
-	MOTOR->i_c = - MOTOR->i_a - MOTOR->i_b;
+	else										// sampling only phase A and B
+	{
+				if(!MOTOR->phase_order)					// not have to swap phase order
+				{
+					MOTOR->adc_a_raw = ADC_iA;
+					MOTOR->adc_b_raw = ADC_iB;
+				}
+				else														// have to swap phase order
+				{
+					MOTOR->adc_a_raw = ADC_iB;
+					MOTOR->adc_b_raw = ADC_iA;
+				}
+				
+				MOTOR->i_a = ( (MOTOR->adc_a_raw - MOTOR->adc_a_offset))*MOTOR->current_gain;
+				MOTOR->i_b = ( (MOTOR->adc_b_raw - MOTOR->adc_b_offset))*MOTOR->current_gain;
+				MOTOR->i_c = - MOTOR->i_a - MOTOR->i_b;
+	}
 }
-void get_current_offset(Motor_struct* MOTOR, uint16_t* ADC_offset_BUFFER)
+
+/**	
+	@brief This function is used to update  ADC_offset_BUFFER to MOTOR adc current offset value. 
+	@prequise	Must be called after execution of function Phase_order to get correct MOTOR->phase_order value
+*/
+void get_current_offset(Motor_struct* MOTOR, uint16_t ADC_iA_offset, uint16_t ADC_iB_offset, uint16_t ADC_iC_offset)
 {
-
-	MOTOR->adc_a_offset = ADC_offset_BUFFER[0];
-	MOTOR->adc_b_offset = ADC_offset_BUFFER[1];
-	MOTOR->adc_c_offset = ADC_offset_BUFFER[2];
-
-
+	if(MOTOR->phase_order)						// have to swap phase order
+	{
+			if(ADC_iA_offset == 0)				// sampling only phase B and C    -> swap B and C
+			{
+					MOTOR->adc_a_offset = ADC_iA_offset;
+					MOTOR->adc_b_offset = ADC_iC_offset;
+					MOTOR->adc_c_offset = ADC_iB_offset;
+			}
+			else if(ADC_iB_offset == 0)		// sampling only phase A and C    -> swap A and C
+			{
+					MOTOR->adc_a_offset = ADC_iC_offset;
+					MOTOR->adc_b_offset = ADC_iB_offset;
+					MOTOR->adc_c_offset = ADC_iA_offset;
+			}
+			else													// sampling only phase A and B    -> swap A and B
+			{
+					MOTOR->adc_a_offset = ADC_iB_offset;
+					MOTOR->adc_b_offset = ADC_iA_offset;
+					MOTOR->adc_c_offset = ADC_iC_offset;
+			}
+	}
+	else															// keep default phase order
+	{
+			MOTOR->adc_a_offset = ADC_iA_offset;
+			MOTOR->adc_b_offset = ADC_iB_offset;
+			MOTOR->adc_c_offset = ADC_iC_offset;
+	}
 }
 
 void get_DQ_current(Motor_struct* MOTOR, float electric_angle)

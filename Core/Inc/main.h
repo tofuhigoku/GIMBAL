@@ -45,6 +45,9 @@ extern "C" {
 
 extern st_drv8311p_t drv8311p_address;
 
+uint8_t BLDC_get_phase_order(st_drv8311p_t* p_drv8311p_address, st_drv8311p_t* p_drv8311p_reg_data, Motor_struct *MOTOR, MT6701_sensor * encoder, float calib_voltage);
+void Uart_Put_UintNumber(UART_HandleTypeDef* huart, int32_t x, uint8_t EOL_flag);
+void Uart_Put_FloatNumber(UART_HandleTypeDef* huart, float y);
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

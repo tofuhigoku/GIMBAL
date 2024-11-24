@@ -92,7 +92,49 @@ uint8_t               RxData[20];
 st_drv8311p_t drv8311p_reg_data = {};
 
 	
+uint8_t BLDC_get_phase_order(st_drv8311p_t* p_drv8311p_address, st_drv8311p_t* p_drv8311p_reg_data, Motor_struct *MOTOR, MT6701_sensor * encoder, float calib_voltage)
+{
+	uint8_t swap_phase_order = 0;
+		    // find natural direction (this is copy of the init code)
+    // move one electrical revolution forward
+    for (int i = 0; i <=500; i++ ) {
+      float angle = 0 + _2PI * i / 500.0f;
+      setPhaseVoltage(0, calib_voltage,  angle, MOTOR);
+			DRV8311P_update_Phase_Voltage(p_drv8311p_address, p_drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
+			MT6701_read_data(encoder);
+      HAL_Delay(2);
+    }
+    // take and angle in the middle
+		MT6701_read_data(encoder);
+    float mid_angle = encoder->raw_angle;
+    // move one electrical revolution backwards
+    for (int i = 500; i >=0; i-- ) {
+      float angle = 0 + _2PI * i / 500.0f ;
+      setPhaseVoltage(0, calib_voltage,  angle, MOTOR);
+			DRV8311P_update_Phase_Voltage(p_drv8311p_address, p_drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
+			MT6701_read_data(encoder);
+      HAL_Delay(2);
+    }
 
+		MT6701_read_data(encoder);
+    float end_angle = encoder->raw_angle;
+    setPhaseVoltage(0, 0,  0, MOTOR);
+		DRV8311P_update_Phase_Voltage(p_drv8311p_address, p_drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
+    HAL_Delay(200);
+    // determine the direction the sensor moved
+    int directionSensor;
+    if (mid_angle < end_angle) {
+//      Serial.println("MOT: sensor_direction==CW");
+      directionSensor = -1;
+    } 
+		else{
+//      Serial.println("MOT: sensor_direction==CCW");
+      directionSensor = 1;
+    }
+		swap_phase_order = directionSensor>0?0:1;
+		MOTOR->phase_order = swap_phase_order;
+	return swap_phase_order;
+}
 
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
@@ -115,6 +157,72 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 uint16_t ADC1_buffer[3]={0,0,0};
 uint32_t ADC1_offset_buffer[3]={0,0,0};
 size_t tmp = sizeof(st_drv8311p_t)/sizeof(uint16_t);
+
+						
+void Uart_Put_UintNumber(UART_HandleTypeDef* huart, int32_t x, uint8_t EOL_flag)
+{
+  char value[10]; //a temp array to hold results of conversion
+	char value2[10];
+	uint8_t sign_x = x>0?1:-1;
+	x = abs(x);
+  int i = 0; //loop index
+  
+  do
+  {
+    value[i++] = (char)(x % 10) + '0'; //convert integer to character
+    x /= 10;
+  } while(x>0);
+	value[i] = sign_x==1?' ':'-';
+	if(EOL_flag)
+	{
+		i+=1;
+		value[i] = '\n';
+	}
+  for(int c = 0; c < i+1; c++)
+	{
+		value2[c] = value[i-c];
+	}
+	HAL_UART_Transmit(huart, (uint8_t*) value2, i+1,100); 
+}
+
+//char value[10]; //a temp array to hold results of conversion
+//char value2[10];
+void Uart_Put_FloatNumber(UART_HandleTypeDef* huart, float y)
+{
+	int a = (int)y;
+	float b = fabs( y - a);
+	
+	Uart_Put_UintNumber(huart, a, 0);
+	char value[10];
+	value[0] = '.';
+	int k=0;
+	for( k=0; k<7; k++){
+		b*=10;
+		if((int)(b)<=0)
+		{
+			value[k+1] = '0';
+		}
+		else
+		{
+			value[k+1] = (char) ((int)b%10) + '0';
+		}
+	}
+	value[k+1] = '\n';
+	HAL_UART_Transmit(huart, (uint8_t*) value, k+2, 100);
+	
+	
+}
+//typedef struct
+//{
+//	char ia_char[2];
+//	float ia;
+//	char ib_char[2];
+//	float ib;
+//	char ic_char[2];
+//	float ic;
+//} Serial_current_package_t;
+
+//Serial_current_package_t Serial_current_package = {"ia", 0, "ib", 0, "ic", 0};
 
 /* USER CODE END 0 */
 
@@ -180,10 +288,14 @@ int main(void)
     /* Notification Error */
     Error_Handler();
   }
+
 	
 	BLDC_param_init(&BLDC, 5, 5, 0.25, 1, 1,1, 280, 1);
-	
+	BLDC.v_calib = 2.0f;
+	BLDC.v_bus = 12.0f;
 	DRV8311P_Init(&drv8311p_address, &drv8311p_reg_data);
+	
+	MT6701._dt = 1/8000.0f;				// about 8khz
 	
 	HAL_ADC_Start(&hadc2);
 	HAL_ADC_Start(&hadc1);
@@ -206,14 +318,14 @@ int main(void)
 			ADC1_offset_buffer[2] = ADC1_offset_buffer[2]/n_of_sample;
 	}
 	HAL_Delay(100);
-	
+		
 	position_sensor_warmup(&MT6701, 20);
 	
-	MT6701.zero_electric_angle = 0.0f;
+	MT6701.zero_electric_angle = 4.576249831f;
 	
 	__HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
 	
-	HAL_TIM_Base_Start_IT(&htim1);
+	HAL_TIM_Base_Start(&htim1);
 //	HAL_TIM_Base_Start(&htim3);
 	
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
@@ -223,13 +335,34 @@ int main(void)
 	DRV8311P_read_All_reg(&drv8311p_address, &drv8311p_reg_data);
 	
 	setPhaseVoltage(0, 0, 0, &BLDC);
-	
 	DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, BLDC.phase_order);
 	DRV8311P_PWM_GEN(&drv8311p_address , 1);
+	
 	DRV8311P_read_All_reg(&drv8311p_address, &drv8311p_reg_data);
 
 
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 0);
+	
+	////// call check phase_order
+	BLDC_get_phase_order( &drv8311p_address, &drv8311p_reg_data, &BLDC, &MT6701, BLDC.v_calib); 
+	//////	call get_current_offset after checking phase_order
+	get_current_offset(&BLDC, ADC1_offset_buffer[0],  ADC1_offset_buffer[1],  ADC1_offset_buffer[2]);
+	
+			
+			setPhaseVoltage(0, 1.5, 0, &BLDC);	// pole alignment with phase A
+			DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
+			
+			HAL_Delay(100);
+			MT6701_read_data(&MT6701);
+			MT6701.zero_electric_angle = _normalizeAngle(MT6701.raw_angle*pole_pairs);
+			
+			setPhaseVoltage(0, 0, 0, &BLDC);		// release the motor
+			DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
+			
+	MT6701_read_data(&MT6701);
+	BLDC.p_des  = MT6701.raw_angle/BLDC.GR;
+	
+	htim1.Instance->DIER |=0x0001;		// enable timer1 Interrupt
 //	DRV8311P_write_n_read();
   /* USER CODE END 2 */
 
@@ -339,7 +472,7 @@ static void MX_ADC1_Init(void)
   }
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Channel = ADC_CHANNEL_12;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;

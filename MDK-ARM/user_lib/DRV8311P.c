@@ -137,37 +137,21 @@ void DRV8311P_PWM_GEN(st_drv8311p_t* p_drv8311p_address, uint8_t ON_OFF)
 void DRV8311P_update_PWM(st_drv8311p_t* p_drv8311p_address, uint16_t dtcA, uint16_t dtcB, uint16_t dtcC)
 {
 
-	uint16_t writedata = 0;
-
-	
-	writedata = dtcA;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_A_DUTY, &writedata);	// set PWMG_A_DUTY = 500
+	uint16_t writedata = dtcA;
+	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_A_DUTY, &writedata);	// set PWMG_A_DUTY
 	
 	writedata = dtcB;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_B_DUTY, &writedata);	// set PWMG_B_DUTY = 500
+	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_B_DUTY, &writedata);	// set PWMG_B_DUTY
 	
 	writedata = dtcC;
-	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_C_DUTY, &writedata);	// set PWMG_C_DUTY = 500
+	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWMG_C_DUTY, &writedata);	// set PWMG_C_DUTY
 }
 
 void DRV8311P_update_Phase_Voltage(st_drv8311p_t* p_drv8311p_address, st_drv8311p_t* p_drv8311p_reg_data, float Ua, float Ub,  float Uc, uint8_t swap_phase_oder )
 {
-//	float dtc_u = Ua;
-//	float dtc_v = Ub;
-//	float dtc_w = Uc;
-	/* Handle phase order swapping so that voltage/current/torque match encoder direction */
-	if(!swap_phase_oder)
-	{ 
+
 		DRV8311P_update_PWM(p_drv8311p_address, (p_drv8311p_reg_data->PWM_MAX_PRD_cnt*Ua),
 																						(p_drv8311p_reg_data->PWM_MAX_PRD_cnt*Ub),
 																						(p_drv8311p_reg_data->PWM_MAX_PRD_cnt*Uc));
 
-	}
-	else
-	{					// dao thu tu pha
-		DRV8311P_update_PWM(p_drv8311p_address, (p_drv8311p_reg_data->PWM_MAX_PRD_cnt*Ua),
-																						(p_drv8311p_reg_data->PWM_MAX_PRD_cnt*Uc),
-																						(p_drv8311p_reg_data->PWM_MAX_PRD_cnt*Ub));
-
-	}
 }

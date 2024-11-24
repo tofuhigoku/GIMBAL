@@ -56,6 +56,7 @@ typedef struct
 // create pointer for lut memory
 //	float _calibrationLut[N_LUT];
 	int directionSensor;
+	float _dt;
 } MT6701_sensor;
 
 

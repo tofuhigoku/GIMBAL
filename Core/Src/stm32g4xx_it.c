@@ -88,6 +88,7 @@ extern uint16_t ADC1_buffer[3];
 
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim1;
+extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -287,13 +288,15 @@ void SysTick_Handler(void)
 void TIM1_UP_TIM16_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_UP_TIM16_IRQn 0 */
-	ADC1_buffer[1] = HAL_ADC_GetValue(&hadc1);
-	ADC1_buffer[2] = HAL_ADC_GetValue(&hadc2);
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, 100);
+	
 	GPIOB->ODR |= (1 << 5);
 	
-	HAL_ADC_Start(&hadc1);
-//	HAL_ADC_Start(&hadc2);
-	HAL_ADC_PollForConversion(&hadc1, 100);
+	ADC1_buffer[1] = HAL_ADC_GetValue(&hadc1);
+	ADC1_buffer[2] = HAL_ADC_GetValue(&hadc2);
+	
+	get_current(&BLDC, 0 , ADC1_buffer[1], ADC1_buffer[2]);
 	
 	error_code = MT6701_read_data(&MT6701);
 	error_mag |= MT6701._4bit_status;
@@ -301,25 +304,27 @@ void TIM1_UP_TIM16_IRQHandler(void)
 	{
 		error_mag_cnt +=1;
 	}
-	position_sensor_sample(&MT6701,0.0002 + 0.00005*0);
+	position_sensor_sample(&MT6701,MT6701._dt);
 	
 	if(stop==0){
 		setPhaseVoltage(0, 0, 0, &BLDC);
-		DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, BLDC.phase_order);
+		DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
 		get_DQ_current(&BLDC, MT6701.elec_angle);
 	}
 	else if(stop ==0x1)
 	{
-		setPhaseVoltage(0, BLDC.v_calib, _3PI_2*0, &BLDC);
-		DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, BLDC.phase_order);
 		get_DQ_current(&BLDC, MT6701.elec_angle);
-//		UU_put_float(USART1, BLDC.i_d, 4);
-//		UU_PutChar(USART1, '\n');
+		
+		Uart_Put_FloatNumber(&huart1, BLDC.i_d);
+		
+		setPhaseVoltage(0, BLDC.v_calib, _3PI_2*0, &BLDC);
+		DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
+		
 	}
 	else if(stop == 0x2)
 	{
-		setPhaseVoltage(BLDC.v_calib, 0, MT6701.elec_angle, &BLDC);
-		DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, BLDC.phase_order);
+		setPhaseVoltage(BLDC.v_calib,0, MT6701.elec_angle , &BLDC);
+		DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
 		get_DQ_current(&BLDC, MT6701.elec_angle);
 	}
 	
@@ -332,6 +337,20 @@ void TIM1_UP_TIM16_IRQHandler(void)
   /* USER CODE BEGIN TIM1_UP_TIM16_IRQn 1 */
 
   /* USER CODE END TIM1_UP_TIM16_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART1 global interrupt / USART1 wake-up interrupt through EXTI line 25.
+  */
+void USART1_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART1_IRQn 0 */
+
+  /* USER CODE END USART1_IRQn 0 */
+  HAL_UART_IRQHandler(&huart1);
+  /* USER CODE BEGIN USART1_IRQn 1 */
+
+  /* USER CODE END USART1_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

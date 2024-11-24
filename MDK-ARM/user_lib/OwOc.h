@@ -76,8 +76,8 @@ void set_dtc(Motor_struct* MOTOR);
 void setPhaseVoltage(float Uq, float Ud, float angle_el,	Motor_struct* MOTOR );		
 uint8_t phase_order(Motor_struct *MOTOR, MT6701_sensor * encoder, float calib_voltage);
 void sensor_calibrate(Motor_struct *MOTOR, MT6701_sensor * encoder, float calib_voltage);		
-void get_current(Motor_struct* MOTOR, float dt);
-void get_current_offset(Motor_struct* MOTOR, uint16_t* ADC_offset_BUFFER);
+void get_current(Motor_struct* MOTOR, uint16_t ADC_iA, uint16_t ADC_iB, uint16_t ADC_iC);
+void get_current_offset(Motor_struct* MOTOR, uint16_t ADC_iA_offset, uint16_t ADC_iB_offset, uint16_t ADC_iC_offset);
 void get_DQ_current(Motor_struct* MOTOR, float electric_angle);
 
 void torque_control(Motor_struct* MOTOR);		
