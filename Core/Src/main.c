@@ -288,11 +288,16 @@ int main(void)
     /* Notification Error */
     Error_Handler();
   }
-
+	
+	Uart_Put_FloatNumber(&huart1, -0.009152);
 	
 	BLDC_param_init(&BLDC, 5, 5, 0.25, 1, 1,1, 280, 1);
 	BLDC.v_calib = 2.0f;
 	BLDC.v_bus = 12.0f;
+	BLDC.ki_d = 0.4483;
+	BLDC.ki_q = BLDC.ki_d;
+	BLDC.k_d = 1.2678;
+	BLDC.k_q = BLDC.k_d;
 	DRV8311P_Init(&drv8311p_address, &drv8311p_reg_data);
 	
 	MT6701._dt = 1/8000.0f;				// about 8khz
