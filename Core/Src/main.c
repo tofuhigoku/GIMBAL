@@ -223,7 +223,62 @@ void Uart_Put_FloatNumber(UART_HandleTypeDef* huart, float y)
 //} Serial_current_package_t;
 
 //Serial_current_package_t Serial_current_package = {"ia", 0, "ib", 0, "ic", 0};
+void ADC2_select_CH5()
+{
+	ADC_ChannelConfTypeDef sConfig = {0};
+	  /** Configure Regular Channel
+  */
+    sConfig.Channel = ADC_CHANNEL_5;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES_5;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
 
+void ADC2_select_CH12()
+{
+	ADC_ChannelConfTypeDef sConfig = {0};
+	  /** Configure Regular Channel
+  */
+    sConfig.Channel = ADC_CHANNEL_12;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES_5;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+uint16_t ADC_vbus_raw = 0;
+void	Vbus_Sampling(float* p_vbus, uint16_t* p_Vbus_raw, float Vbus_gain )
+{
+	/*Switch to ADC channel connecting with Vbus source*/
+	ADC2_select_CH5();
+	
+//	HAL_ADC_Start(&hadc1);
+//	HAL_ADC_Start(&hadc2);
+//	HAL_ADC_PollForConversion(&hadc2, 100);
+		HAL_ADC_Start(&hadc1);
+		HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
+	
+		 ADC_vbus_raw = HAL_ADC_GetValue(&hadc2);
+//	ADC_vbus_raw = HAL_ADC_GetValue(&hadc2);
+	*p_Vbus_raw = ADC_vbus_raw;
+	*p_vbus = ADC_vbus_raw*Vbus_gain;
+	
+	/*Switch back to ADC channel connecting with Phase current source*/
+	ADC2_select_CH12();
+}
+
+	
 /* USER CODE END 0 */
 
 /**
@@ -289,15 +344,19 @@ int main(void)
     Error_Handler();
   }
 	
-	Uart_Put_FloatNumber(&huart1, -0.009152);
+//	Uart_Put_FloatNumber(&huart1, -0.009152);
 	
-	BLDC_param_init(&BLDC, 5, 5, 0.25, 1, 1,1, 280, 1);
+	BLDC_param_init(&BLDC,12.0, 5, 0.25, 1, 7.8f , 320, 1);
 	BLDC.v_calib = 2.0f;
-	BLDC.v_bus = 12.0f;
-	BLDC.ki_d = 0.4483;
+	
+	BLDC.ki_d = 0.4483*0 +0.1;
 	BLDC.ki_q = BLDC.ki_d;
-	BLDC.k_d = 1.2678;
+	BLDC.k_d = 1.2678*0 +0.05;
 	BLDC.k_q = BLDC.k_d;
+	
+	BLDC.kd = 0.02f;
+	BLDC.kp = 0.0f;
+	
 	DRV8311P_Init(&drv8311p_address, &drv8311p_reg_data);
 	
 	MT6701._dt = 1/8000.0f;				// about 8khz
@@ -327,6 +386,8 @@ int main(void)
 	position_sensor_warmup(&MT6701, 20);
 	
 	MT6701.zero_electric_angle = 4.576249831f;
+	
+//	Vbus_Sampling(&BLDC.v_bus,&BLDC.Vbus_raw, BLDC.Vbus_Gain);
 	
 	__HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
 	

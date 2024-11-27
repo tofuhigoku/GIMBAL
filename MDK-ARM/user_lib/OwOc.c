@@ -7,16 +7,13 @@
 #include "math.h"
 
 
-void BLDC_param_init(Motor_struct* MOTOR, float VBUS, float I_max, float Current_sensor_gain, float Rshunt_ , float _R_phase, float _L_phase, float KV, float GEAR_RATIO ){
+void BLDC_param_init(Motor_struct* MOTOR, float VBUS, float I_max, float Current_sensor_gain, float Rshunt_ , float Vbus_gain, float KV, float GEAR_RATIO ){
 	MOTOR->v_bus = VBUS;
+	MOTOR->Vbus_Gain = Vbus_gain*3.3/4096;
 	
 	MOTOR->dtc_u = 0;
 	MOTOR->dtc_v = 0;
 	MOTOR->dtc_w = 0;
-	
-	MOTOR->v_u = 0;
-	MOTOR->v_v = 0;
-	MOTOR->v_w = 0;
 	
 	MOTOR->phase_order = 0;
 	MOTOR->v_max = VBUS;
@@ -44,8 +41,7 @@ void BLDC_param_init(Motor_struct* MOTOR, float VBUS, float I_max, float Current
 	MOTOR->KT  = 1.0f/(MOTOR->KV*0.1047198);											// Nm/A
 	MOTOR->GR = GEAR_RATIO;
 	
-	MOTOR->R_phase = _R_phase;
-	MOTOR->L_phase = _L_phase;
+//
 	
 	MOTOR->CS_GAIN = Current_sensor_gain;
 	MOTOR->R_shunt = Rshunt_;
@@ -467,21 +463,32 @@ void get_DQ_current(Motor_struct* MOTOR, float electric_angle)
 	
 	float sf = sin_lut(electric_angle);
 	float cf = cos_lut(electric_angle);
-//	MOTOR->i_d =  __ca * i_alpha + __sa * i_beta;
-//	MOTOR->i_q = -__sa * i_alpha + __ca * i_beta;
+
 	
 	MOTOR->i_d = 0.6666667f*( cf*MOTOR->i_a + ( SQRT3_2*sf-.5f*cf)*MOTOR->i_b + (-SQRT3_2*sf-.5f*cf)*MOTOR->i_c);   ///Faster DQ0 Transform
   MOTOR->i_q = 0.6666667f*(-sf*MOTOR->i_a - (-SQRT3_2*cf-.5f*sf)*MOTOR->i_b - ( SQRT3_2*cf-.5f*sf)*MOTOR->i_c);
 	
-	MOTOR->i_q_filt = (1.0f-CURRENT_FILT_ALPHA)*MOTOR->i_q_filt + CURRENT_FILT_ALPHA*MOTOR->i_q;	// these aren't used for control but are sometimes nice for debugging
-  MOTOR->i_d_filt = (1.0f-CURRENT_FILT_ALPHA)*MOTOR->i_d_filt + CURRENT_FILT_ALPHA*MOTOR->i_d;
+//	MOTOR->i_q_filt = (1.0f-CURRENT_FILT_ALPHA)*MOTOR->i_q_filt + CURRENT_FILT_ALPHA*MOTOR->i_q;	// these aren't used for control but are sometimes nice for debugging
+//  MOTOR->i_d_filt = (1.0f-CURRENT_FILT_ALPHA)*MOTOR->i_d_filt + CURRENT_FILT_ALPHA*MOTOR->i_d;
 }
 void torque_control(Motor_struct* MOTOR)
-	{
-//		MOTOR->v_des = (MOTOR->p_des - MOTOR->theta_mech)*5000;
-    float torque_des = MOTOR->kp*(MOTOR->p_des - MOTOR->theta_mech) + MOTOR->t_ff + MOTOR->kd*(MOTOR->v_des - MOTOR->dtheta_mech);
+{
+
+		float torque_des = 0.0f;
+		if(MOTOR->op_mode == Motor_FOC_pos)
+		{
+			torque_des = MOTOR->kp*(MOTOR->p_des - MOTOR->theta_mech);
+		}
+		else if (MOTOR->op_mode == Motor_FOC_vel)
+		{
+			torque_des = MOTOR->kd*(MOTOR->v_des - MOTOR->dtheta_mech);
+		}
+		else if (MOTOR->op_mode == Motor_FOC_tor)
+		{
+			torque_des = MOTOR->kp*(MOTOR->p_des - MOTOR->theta_mech) + MOTOR->t_ff + MOTOR->kd*(MOTOR->v_des - MOTOR->dtheta_mech);
+		}
+
     MOTOR->i_q_des = fast_fmaxf(fast_fminf(torque_des/(MOTOR->KT*MOTOR->GR), MOTOR->i_max), -MOTOR->i_max);
-//		MOTOR->i_q_des = fast_fmaxf(fast_fminf(torque_des/(MOTOR->KT*MOTOR->GR), 5), -5);
     MOTOR->i_d_des = 0.0f;
 
 }
@@ -512,10 +519,8 @@ void commutate(Motor_struct* MOTOR, MT6701_sensor * encoder )
        float i_d_error = MOTOR->i_d_des - MOTOR->i_d;
        float i_q_error = MOTOR->i_q_des - MOTOR->i_q;
 
-
-       // Calculate decoupling feed-forward voltages //
-       float v_d_ff = 0.0f;//-controller->dtheta_elec*L_Q*controller->i_q;
-       float v_q_ff = 0.0f;//controller->dtheta_elec*L_D*controller->i_d;
+       float v_d_ff = 0.0f;
+       float v_q_ff = 0.0f;
 
        MOTOR->v_d = MOTOR->k_d*i_d_error + MOTOR->d_int + v_d_ff;
 
@@ -541,11 +546,6 @@ void commutate(Motor_struct* MOTOR, MT6701_sensor * encoder )
        limit_norm(&MOTOR->v_d, &MOTOR->v_q, MOTOR->v_max);
 			 
 			 setPhaseVoltage(MOTOR->v_q, MOTOR->v_d, MOTOR->theta_elec, MOTOR);
-
-//       abc(controller->theta_elec + 1.5f*DT*controller->dtheta_elec, controller->v_d, controller->v_q, &controller->v_u, &controller->v_v, &controller->v_w); //inverse dq0 transform on voltages
-//       svm(controller->v_max, controller->v_u, controller->v_v, controller->v_w, &controller->dtc_u, &controller->dtc_v, &controller->dtc_w); //space vector modulation
-
-//       set_dtc(controller);
 
 }
 

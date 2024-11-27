@@ -224,54 +224,14 @@ void SysTick_Handler(void)
 	{
 //		DRV8311P_write_n_read();
 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+
 	}
-//	if(flag==1)
-//		{
-//			flag = 0;
-//			 DRV8311P_read_addr(addr, &r_data);
-////			DRV8311P_read_multiple_addr(drv8311p_address.DEV_STS1, (uint16_t*) &drv8311p_reg_data, 21);
-//			DRV8311P_read_All_reg(&drv8311p_address, &drv8311p_reg_data);
-
-//			
-//		}
-//	else if(flag == 2)
+//	if((HAL_GetTick()%100 == 0) && (htim1.Instance->DIER & 0x0001))
 //	{
-//		flag = 0;
-//		DRV8311P_write_addr(addr, &w_data);
+//		htim1.Instance->DIER &= ~0x0001;		// enable timer1 Interrupt
+//		Vbus_Sampling(&BLDC.v_bus,&BLDC.Vbus_raw, BLDC.Vbus_Gain);
+//		htim1.Instance->DIER |=0x0001;		// enable timer1 Interrupt
 //	}
-//	else if (flag == 3)
-//	{
-//		flag =0;
-//		DRV8311P_Init(&drv8311p_address, &drv8311p_reg_data);
-//		
-//	}
-//	else if (flag == 4)
-//	{
-//		flag = 0; 
-//		DRV8311P_PWM_GEN(&drv8311p_address, 1);
-//	}
-//	else if (flag == 5)
-//	{
-//		flag = 0; 
-//		DRV8311P_PWM_GEN(&drv8311p_address, 0);
-//	}
-//	else if (flag == 6)
-//	{
-//		flag = 0;
-//		DRV8311P_update_PWM(&drv8311p_address,  drv8311p_reg_data.PWMG_A_DUTY, drv8311p_reg_data.PWMG_B_DUTY, drv8311p_reg_data.PWMG_C_DUTY);
-//	}
-//	else if (flag == 7)
-//	{
-//		flag = 0;
-//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
-//	}
-//	else if (flag == 8)
-//	{
-//		flag = 0;
-//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
-//	}
-
-	
   /* USER CODE END SysTick_IRQn 1 */
 }
 
@@ -306,31 +266,35 @@ void TIM1_UP_TIM16_IRQHandler(void)
 	}
 	position_sensor_sample(&MT6701,MT6701._dt);
 	
-	if(stop==0){
+	if(BLDC.op_mode == Motor_No_OP){
+		get_DQ_current(&BLDC, MT6701.elec_angle);
 		setPhaseVoltage(0, 0, 0, &BLDC);
 		DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
-		get_DQ_current(&BLDC, MT6701.elec_angle);
 	}
-	else if(stop ==0x1)
+	else if(BLDC.op_mode == Motor_PA_PoleAlign)
 	{
 		get_DQ_current(&BLDC, MT6701.elec_angle);
 		
-		Uart_Put_FloatNumber(&huart1, BLDC.i_d);
+//		Uart_Put_FloatNumber(&huart1, BLDC.i_d);
 		
 		setPhaseVoltage(0, BLDC.v_calib, _3PI_2*0, &BLDC);
 		DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
 		
 	}
-	else if(stop == 0x2)
+	else if(BLDC.op_mode == Motor_SimpleTest)
 	{
+		get_DQ_current(&BLDC, MT6701.elec_angle);
 		setPhaseVoltage(BLDC.v_calib,0, MT6701.elec_angle , &BLDC);
 		DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
-		get_DQ_current(&BLDC, MT6701.elec_angle);
+	}
+	else
+	{
+		commutate(&BLDC, &MT6701);
+		DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);
 	}
 	
 	GPIOB->ODR &= ~(1 << 5);
 	
-//	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 0);
 	
   /* USER CODE END TIM1_UP_TIM16_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);

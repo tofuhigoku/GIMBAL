@@ -48,6 +48,11 @@ extern st_drv8311p_t drv8311p_address;
 uint8_t BLDC_get_phase_order(st_drv8311p_t* p_drv8311p_address, st_drv8311p_t* p_drv8311p_reg_data, Motor_struct *MOTOR, MT6701_sensor * encoder, float calib_voltage);
 void Uart_Put_UintNumber(UART_HandleTypeDef* huart, int32_t x, uint8_t EOL_flag);
 void Uart_Put_FloatNumber(UART_HandleTypeDef* huart, float y);
+
+void ADC2_select_CH12();
+void ADC2_select_CH5();
+void	Vbus_Sampling(float* p_vbus, uint16_t* p_Vbus_raw, float Vbus_gain );
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
