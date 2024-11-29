@@ -5,10 +5,10 @@ clear()
 %     s + 4758   sL + R   s/2630 + 4758/2630
 
 %%% System Parameters %%%
-R =  4758/2630; % Resistance in Ohms
-L = 1/2630; % Inductance in Henries
+R =  4948/1310; % Resistance in Ohms
+L = 1/1310; % Inductance in Henries
 Ts = 1/8000; % Sample period
-wc = pi/10; % Crossover frequency, in Radians per sample
+wc = pi/40; % Crossover frequency, in Radians per sample
 %%%
 s = tf('s');
 sys = 1/(L*s + R); % Continuous time transfer function

@@ -95,10 +95,10 @@ void DRV8311P_Init(st_drv8311p_t* p_drv8311p_address, st_drv8311p_t* p_drv8311p_
 {
 	DRV8311P_read_All_reg(p_drv8311p_address, p_drv8311p_reg_data);
 
-	uint16_t writedata = 0x31;
+	uint16_t writedata = 0x30;
 	DRV8311P_write_addr((uint8_t) p_drv8311p_address->DRVF_CTRL, &writedata);	// set OCP current level is 5A
 	
-	writedata = 0x03;
+	writedata = 0x02;
 	DRV8311P_write_addr((uint8_t) p_drv8311p_address->FLT_TCTRL, &writedata);	// set SLOW_RETRY = 0.5s, FAST_RETRY = 5ms
 	
 //	writedata = 1000;
@@ -115,7 +115,7 @@ void DRV8311P_Init(st_drv8311p_t* p_drv8311p_address, st_drv8311p_t* p_drv8311p_
 	writedata = 0x007;
 	DRV8311P_write_addr((uint8_t) p_drv8311p_address->PWM_CTRL1, &writedata);	// 
 	
-	writedata = 0x11;
+	writedata = 0x02;
 	DRV8311P_write_addr((uint8_t) p_drv8311p_address->DRV_CTRL, &writedata);	// set TDEAD_CTRL = 200ns, SLEW_RATE = 75 V/µs
 	
 	writedata = 0x08;

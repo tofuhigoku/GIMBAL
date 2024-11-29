@@ -275,7 +275,7 @@ void TIM1_UP_TIM16_IRQHandler(void)
 	{
 		get_DQ_current(&BLDC, MT6701.elec_angle);
 		
-//		Uart_Put_FloatNumber(&huart1, BLDC.i_d);
+		Uart_Put_FloatNumber(&huart1, BLDC.i_d);
 		
 		setPhaseVoltage(0, BLDC.v_calib, _3PI_2*0, &BLDC);
 		DRV8311P_update_Phase_Voltage(&drv8311p_address, &drv8311p_reg_data, BLDC.dtc_u, BLDC.dtc_v, BLDC.dtc_w, 0);

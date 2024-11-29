@@ -344,18 +344,18 @@ int main(void)
     Error_Handler();
   }
 	
-//	Uart_Put_FloatNumber(&huart1, -0.009152);
+	Uart_Put_FloatNumber(&huart1, -0.009152);
 	
-	BLDC_param_init(&BLDC,12.0, 5, 0.25, 1, 7.8f , 320, 1);
+	BLDC_param_init(&BLDC,12.0, 5, 0.25, 1, 7.8f , 330, 1);
 	BLDC.v_calib = 2.0f;
 	
-	BLDC.ki_d = 0.4483*0 +0.1;
+	BLDC.ki_d = 0.4612;
 	BLDC.ki_q = BLDC.ki_d;
-	BLDC.k_d = 1.2678*0 +0.05;
+	BLDC.k_d = 1.2863;
 	BLDC.k_q = BLDC.k_d;
 	
-	BLDC.kd = 0.02f;
-	BLDC.kp = 0.0f;
+	BLDC.kd = 0.001f;
+	BLDC.kp = 0.05f;
 	
 	DRV8311P_Init(&drv8311p_address, &drv8311p_reg_data);
 	
